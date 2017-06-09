@@ -1,4 +1,4 @@
-import tensorflow as tf
+import tensorflow as tf, math
 
 DISTANCES = ['euc', 'man', 'cos']
 DISTANCE_MAPPINGS = {'euc': 'euclidean', 'man': 1}
@@ -22,17 +22,21 @@ def linear(X, out_dim, scope):
 
   return tf.matmul(X, weights) + bias
 
-def _feedforward(X, out_dim, scope): return tf.nn.relu(linear(X, out_dim, scope))
+def _feedforward_step(X, out_dim, scope): return tf.nn.relu(linear(X, out_dim, scope))
 
-def feedforward_net(X, out_dim, hidden_layers=2, hidden_dim=-1, skip_connections=False):
+# TODO(mmd): Use enums.
+def feedforward(X, out_dim, hidden_layers=2, hidden_dim=-1, dim_change='jump', skip_connections=False):
+  assert dim_reduction in ['jump', 'step']
   assert hidden_layers > 1
 
   source_dim = get_dim(X)
   if hidden_dim == -1: hidden_dim = source_dim
+  layer_dim = hidden_dim
 
-  running_state = feedforward(X, hidden_dim, 'input_layer')
+  running_state = _feedforward_step(X, hidden_dim, 'input_layer')
   for layer in range(1, hidden_layers):
-    if skip_connections: running_state += feedforward(running_state, hidden_dim, 'layer_%d' % layer)
-    else: running_state = feedforward(running_state, hidden_dim, 'layer_%d' % layer)
+    if dim_change == 'step': layer_dim -= math.floor(math.abs(hidden_dim - out_dim)/(hidden_layers - 1))
+    if skip_connections: running_state += _feedforward_step(running_state, layer_dim, 'layer_%d' % layer)
+    else: running_state = _feedforward_step(running_state, layer_dim, 'layer_%d' % layer)
 
   return linear(running_state, out_dim, 'output_layer')
