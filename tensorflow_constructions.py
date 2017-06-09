@@ -28,7 +28,16 @@ def dist(X, Y, ord='euc'):
     if ord == 'cos': return _cosine_distance(X, Y)
     else: return tf.reduce_mean(tf.norm(X - Y, axis=1, ord=DISTANCE_MAPPINGS[ord]))
 
+# Centering data:
+def center(sample_df, axis=0):
+    sample_mean = np.mean(sample_df, axis=axis)
+    return (
+        lambda X: X - sample_mean,
+        lambda Y: Y + sample_mean,
+    )
+
 # Neural Network Constructions
+def leaky_relu(X, alpha=0.2): return tf.maximum(alpha*X, X)
 def linear(
       X, out_dim, scope,
       weights_initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.2),
