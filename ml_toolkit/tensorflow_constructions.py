@@ -10,7 +10,7 @@ def num_samples(X): return shape(X)[0]
 
 def make_compatible(X, Y):
     num_x_samples, num_y_samples = num_samples(X), num_y_samples(Y)
-    pad = lambda T, diff: return tf.pad(T, [[0, diff], [0, 0]], mode='Symmetric')
+    pad = lambda T, diff: tf.pad(T, [[0, diff], [0, 0]], mode='Symmetric')
     return tf.case({
             tf.greater(num_x_samples, num_y_samples): lambda: (X, pad(Y, num_x_samples - num_y_samples)),
             tf.greater(num_y_samples, num_x_samples): lambda: (pad(X, num_y_samples - num_x_samples), Y),
@@ -54,7 +54,7 @@ def linear(
 def _feedforward_step(X, out_dim, scope, skip_connections=False, activation=tf.nn.relu):
       # For now only apply skip connections if out_dim == in_dim
       ff = activation(linear(X, out_dim, scope))
-      return tf.cond(skip_connections and get_dim(X) == out_dim, lambda: X + ff lambda: X)
+      return tf.cond(skip_connections and get_dim(X) == out_dim, lambda: X + ff, lambda: X)
 
 # TODO(mmd): Use enums for dim_change options.
 def feedforward(
