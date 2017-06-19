@@ -1,22 +1,24 @@
-import tensorflow as tf, numpy as np, math
+import tensorflow as tf, numpy as np, pandas as pd, math
 
 DISTANCES = ['euc', 'man', 'cos']
 DISTANCE_MAPPINGS = {'euc': 'euclidean', 'man': 1}
 
 # Shape Constructions
-def shape(X): return X.get_shape().as_list() if type(X) == tf.Tensor else X.shape
-def get_dim(X): return shape(X)[1]
-def num_samples(X): return shape(X)[0]
+def shape(X, static=True):
+    if type(X) == pd.DataFrame: return X.shape
+    elif type(X) == tf.Tensor:
+        return X.get_shape().as_list() if static else tf.shape(X)
+    raise InvalidArgumentError("shape() only supports Tensor & DataFrame inputs")
 
-def make_compatible(X, Y):
-    num_x_samples, num_y_samples = num_samples(X), num_y_samples(Y)
-    pad = lambda T, diff: tf.pad(T, [[0, diff], [0, 0]], mode='Symmetric')
-    return tf.case({
-            tf.greater(num_x_samples, num_y_samples): lambda: (X, pad(Y, num_x_samples - num_y_samples)),
-            tf.greater(num_y_samples, num_x_samples): lambda: (pad(X, num_y_samples - num_x_samples), Y),
-        },
-        default=lambda: (X, Y),
-    )
+def get_dim(X, static=True): return shape(X, static=static)[1]
+def num_samples(X, static=False): return shape(X, static=static)[0]
+
+def make_compatible(*tensors):
+    max_num_samples = tf.reduce_max(map(num_samples, tensors))
+
+    pad = lambda T: tf.reshape(tf.pad(T, [[0, max_num_samples - num_samples(T)], [0, 0]], mode='Symmetric'),
+        [max_num_samples, get_dim(T, static=True)])
+    return map(pad, tensors)
 
 # Distances
 def _cosine_distance(X, Y, pad=1e-7):
@@ -46,15 +48,16 @@ def linear(
     source_dim = get_dim(X)
 
     with tf.variable_scope(scope):
-      weights = tf.get_variable('weights', [source_dim, out_dim], initializer=weights_initializer)
-      bias = tf.get_variable('bias', [out_dim], initializer=bias_initializer)
+        weights = tf.get_variable('weights', shape=[source_dim, out_dim], initializer=weights_initializer)
+        bias = tf.get_variable('bias', shape=[out_dim], initializer=bias_initializer)
 
     return tf.matmul(X, weights) + bias
 
 def _feedforward_step(X, out_dim, scope, skip_connections=False, activation=tf.nn.relu):
-      # For now only apply skip connections if out_dim == in_dim
-      ff = activation(linear(X, out_dim, scope))
-      return tf.cond(skip_connections and get_dim(X) == out_dim, lambda: X + ff, lambda: X)
+    # For now only apply skip connections if out_dim == in_dim
+    ff = activation(linear(X, out_dim, scope))
+    if skip_connections and get_dim(X) == out_dim: return X + ff
+    else: return ff
 
 # TODO(mmd): Use enums for dim_change options.
 def feedforward(
@@ -67,20 +70,22 @@ def feedforward(
     output_layer      = True,
     dim_change        = 'jump',
 ):
-    assert dim_change in ['jump', 'step']
+    assert dim_change in ['jump', 'step'], "'%s' not valid (should be in ['jump', 'step'])" % dim_change
     assert isinstance(hidden_layers, int) and hidden_layers >= 1
     assert isinstance(hidden_dim, int) and (hidden_dim == -1 or hidden_dim > 0)
 
     source_dim = get_dim(X)
     if hidden_dim == -1: hidden_dim = source_dim
     layer_dim = hidden_dim
+    step_size = math.floor((hidden_dim - out_dim)/(hidden_layers - 1))
 
-    running = _feedforward(X, layer_dim, 'layer_0', skip_connections=skip_connections, activation=activation)
+    running = _feedforward_step(X, layer_dim, 'layer_0', skip_connections=skip_connections,
+        activation=activation)
     for layer in range(1, hidden_layers):
-        if dim_change == 'step': layer_dim -= math.floor(math.abs(hidden_dim - out_dim)/(hidden_layers - 1))
-        running = _feedforward(running, hidden_dim, 'layer_%d' % layer, skip_connections=skip_connections,
-            activation=activation)
+        if dim_change == 'step': layer_dim -= step_size
+        running = _feedforward_step(running, layer_dim, 'layer_%d' % layer,
+            skip_connections=skip_connections, activation=activation)
 
-    if output_layer: return _feedforward(running, out_dim, 'output_layer', skip_connections=skip_connections,
-        activation=output_activation)
+    if output_layer: return _feedforward_step(running, out_dim, 'output_layer',
+        skip_connections=skip_connections, activation=output_activation)
     else: return running
