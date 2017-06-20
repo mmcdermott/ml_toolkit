@@ -89,3 +89,5 @@ def feedforward(
     if output_layer: return _feedforward_step(running, out_dim, 'output_layer',
         skip_connections=skip_connections, activation=output_activation)
     else: return running
+
+def step_variable(name='global_step'): return tf.Variable(0, name=name, trainable=False)
