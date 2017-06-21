@@ -18,6 +18,7 @@ def _interleave(*ls):
             result += [el]
     return result
 
+# TODO(mmd): Should take a list of sizes, not just these two.
 def split(tables, test_size=0.2, dev_size=.125, random_state=None):
     """
     Splits the data into train/test (and possibly also dev)
@@ -37,7 +38,7 @@ def split(tables, test_size=0.2, dev_size=.125, random_state=None):
     results = list(train_test_split(*present_tables, test_size=test_size, random_state=random_state))
     if dev_size is not None:
         train_tables, test_tables = _split_pairs(results)
-        dev_splits = train_test_split(*train_tables, train_size=(1-dev_size), random_state=random_state)
+        dev_splits = train_test_split(*train_tables, test_size=dev_size, random_state=random_state)
         train_tables, dev_tables = _split_pairs(dev_splits)
         results = list(_interleave(train_tables, dev_tables, test_tables))
 

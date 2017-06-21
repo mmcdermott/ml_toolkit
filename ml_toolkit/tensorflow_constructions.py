@@ -16,6 +16,7 @@ def num_samples(X, static=False): return shape(X, static=static)[0]
 def make_compatible(*tensors):
     max_num_samples = tf.reduce_max(map(num_samples, tensors))
 
+    #TODO(mmd): Upsample properly
     pad = lambda T: tf.reshape(tf.pad(T, [[0, max_num_samples - num_samples(T)], [0, 0]], mode='Symmetric'),
         [max_num_samples, get_dim(T, static=True)])
     return map(pad, tensors)
@@ -60,6 +61,7 @@ def _feedforward_step(X, out_dim, scope, skip_connections=False, activation=tf.n
     else: return ff
 
 # TODO(mmd): Use enums for dim_change options.
+# TODO(mmd): Dropout on and output_layer = False may not make any sense...
 def feedforward(
     X, out_dim,
     hidden_layers     = 2,
@@ -69,6 +71,7 @@ def feedforward(
     output_activation = tf.identity,
     output_layer      = True,
     dim_change        = 'jump',
+    dropout_keep_prob = None,
 ):
     assert dim_change in ['jump', 'step'], "'%s' not valid (should be in ['jump', 'step'])" % dim_change
     assert isinstance(hidden_layers, int) and hidden_layers >= 1
@@ -76,15 +79,16 @@ def feedforward(
 
     source_dim = get_dim(X)
     if hidden_dim == -1: hidden_dim = source_dim
-    layer_dim = hidden_dim
-    step_size = math.floor((hidden_dim - out_dim)/(hidden_layers - 1))
 
+    layer_dim = hidden_dim
     running = _feedforward_step(X, layer_dim, 'layer_0', skip_connections=skip_connections,
         activation=activation)
+
     for layer in range(1, hidden_layers):
-        if dim_change == 'step': layer_dim -= step_size
+        if dim_change == 'step': layer_dim -= math.floor((hidden_dim - out_dim)/(hidden_layers - 1))
         running = _feedforward_step(running, layer_dim, 'layer_%d' % layer,
             skip_connections=skip_connections, activation=activation)
+    if dropout_keep_prob is not None: running = tf.nn.dropout(running, dropout_keep_prob)
 
     if output_layer: return _feedforward_step(running, out_dim, 'output_layer',
         skip_connections=skip_connections, activation=output_activation)
