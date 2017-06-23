@@ -54,9 +54,18 @@ def linear(
 
     return tf.matmul(X, weights) + bias
 
-def _feedforward_step(X, out_dim, scope, skip_connections=False, activation=tf.nn.relu):
+def _feedforward_step(
+    X, out_dim, scope,
+    skip_connections    = False,
+    activation          = tf.nn.relu,
+    batch_normalization = None,
+    training            = True,
+):
     # For now only apply skip connections if out_dim == in_dim
-    ff = activation(linear(X, out_dim, scope))
+    l = linear(X, out_dim, scope)
+    if batch_normalization:
+        l = tf.layers.batch_normalization(l, center=True, scale=True, is_training=training, scope=scope)
+    ff = activation(l)
     if skip_connections and get_dim(X) == out_dim: return X + ff
     else: return ff
 
@@ -64,14 +73,16 @@ def _feedforward_step(X, out_dim, scope, skip_connections=False, activation=tf.n
 # TODO(mmd): Dropout on and output_layer = False may not make any sense...
 def feedforward(
     X, out_dim,
-    hidden_layers     = 2,
-    hidden_dim        = -1,
-    activation        = tf.nn.relu,
-    skip_connections  = False,
-    output_activation = tf.identity,
-    output_layer      = True,
-    dim_change        = 'jump',
-    dropout_keep_prob = None,
+    hidden_layers       = 2,
+    hidden_dim          = -1,
+    activation          = tf.nn.relu,
+    skip_connections    = False,
+    output_activation   = tf.identity,
+    output_layer        = True,
+    dim_change          = 'jump',
+    dropout_keep_prob   = None,
+    batch_normalization = None,
+    training            = True,
 ):
     assert dim_change in ['jump', 'step'], "'%s' not valid (should be in ['jump', 'step'])" % dim_change
     assert isinstance(hidden_layers, int) and hidden_layers >= 1
