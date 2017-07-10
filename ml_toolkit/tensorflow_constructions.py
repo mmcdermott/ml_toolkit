@@ -13,13 +13,16 @@ def shape(X, static=True):
 def get_dim(X, static=True): return shape(X, static=static)[1]
 def num_samples(X, static=False): return shape(X, static=static)[0]
 
-def make_compatible(*tensors):
-    max_num_samples = tf.reduce_max(map(num_samples, tensors))
+def upsample(tensor, new_sample_cnt):
+    curr = num_samples(tensor)
+    stack_cnt = new_sample_cnt // curr
 
-    #TODO(mmd): Upsample properly
-    pad = lambda T: tf.reshape(tf.pad(T, [[0, max_num_samples - num_samples(T)], [0, 0]], mode='Symmetric'),
-        [max_num_samples, get_dim(T, static=True)])
-    return map(pad, tensors)
+    T = tf.tile(tensor, tf.stack([stack_cnt, 1], axis=0), name='upsample_tile')
+    return tf.reshape(tf.pad(T, [[0, new_sample_cnt - stack_cnt * curr], [0, 0]], mode='Symmetric'),
+        [new_sample_cnt, get_dim(T, static=True)])
+
+def make_compatible(*tensors):
+    return map(lambda T: upsample(T, tf.reduce_max(map(num_samples, tensors))), tensors)
 
 # Distances
 def _cosine_distance(X, Y, pad=1e-7):
