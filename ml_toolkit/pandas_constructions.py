@@ -1,5 +1,43 @@
 import pandas as pd, numpy as np
 from sklearn.model_selection import train_test_split
+# TODO(mmd): Fix improper _ usage on private methods.
+
+
+# TODO(mmd): Document pre-conditions.
+def join(dfs): return dfs[0].join(dfs[1:], how='inner')
+
+def stack_columns(df, col_name):
+    assert len(df.columns.names) == 1, "stack_columns does not yet support stackable multi-indexing."
+    cols = df.columns
+    name = df.columns.names[0]
+    dfs = []
+    for col in cols:
+        tmp_df = df.filter(items=[col])
+        tmp_df[name] = col
+        tmp_df.set_index(name, append=True, inplace=True)
+        tmp_df.rename(columns={col: col_name}, inplace=True)
+        dfs += [tmp_df]
+    return pd.concat(dfs)
+
+# TODO(mmd): Better handling of case where levels_to_keep \cap df_idx.names == {}.
+def __keep_levels(df_idx, levels_to_keep=[]):
+    all_levels = df_idx.names
+    for level in all_levels:
+        if level not in levels_to_keep: df_idx = df_idx.droplevel(level)
+    return df_idx
+def __drop_levels(df_idx, levels_to_drop=[]):
+    for level in levels_to_drop: df_idx = df_idx.droplevel(level)
+    return df_idx
+def keep_indices(df, index_levels=[], column_levels=[], inplace=False):
+    df_cp = df.copy() if not inplace else df
+    if index_levels != []: df_cp.index = __keep_levels(df_cp.index, levels_to_keep=index_levels)
+    if column_levels != []: df_cp.columns = __keep_levels(df_cp.columns, levels_to_keep=column_levels)
+    return df_cp
+def drop_indices(df, index_levels=[], column_levels=[], inplace=False):
+    df_cp = df.copy() if not inplace else df
+    df_cp.index = __drop_levels(df_cp.index, index_levels)
+    df_cp.columns = __drop_levels(df_cp.columns, column_levels)
+    return df_cp
 
 def get_index_levels(df, levels, make_objects_categories=True):
     df_2 = pd.DataFrame(index=df.index)
