@@ -8,7 +8,7 @@ def shape(X, static=True):
     if type(X) == pd.DataFrame: return X.shape
     elif type(X) == tf.Tensor:
         return X.get_shape().as_list() if static else tf.shape(X)
-    raise InvalidArgumentError("shape() only supports Tensor & DataFrame inputs")
+    raise TypeError("shape() only supports Tensor & DataFrame inputs; X is of type %s" % str(type(X)))
 
 def get_dim(X, static=True): return shape(X, static=static)[1]
 def num_samples(X, static=False): return shape(X, static=static)[0]
