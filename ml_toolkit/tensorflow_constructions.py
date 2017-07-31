@@ -46,14 +46,18 @@ def center(sample_df, axis=0):
 def leaky_relu(X, alpha=0.2): return tf.maximum(alpha*X, X)
 def linear(
       X, out_dim, scope,
-      weights_initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.2),
+      weights_initializer=tf.truncated_normal_initializer(mean=0.0, stddev=0.05),
       bias_initializer=tf.constant_initializer(0.0),
 ):
     source_dim = get_dim(X)
 
     with tf.variable_scope(scope):
-        weights = tf.get_variable('weights', shape=[source_dim, out_dim], initializer=weights_initializer)
-        bias = tf.get_variable('bias', shape=[out_dim], initializer=bias_initializer)
+        if type(weights_initializer) == np.ndarray:
+            weights = tf.get_variable('weights', initializer=weights_initializer.astype(np.float32), dtype=tf.float32)
+            bias = tf.get_variable('bias', initializer=bias_initializer.astype(np.float32), dtype=tf.float32)
+        else:
+            weights = tf.get_variable('weights', shape=[source_dim, out_dim], initializer=weights_initializer)
+            bias = tf.get_variable('bias', shape=[out_dim], initializer=bias_initializer)
 
     return tf.matmul(X, weights) + bias
 
@@ -63,9 +67,13 @@ def _feedforward_step(
     activation          = tf.nn.relu,
     batch_normalization = None,
     training            = True,
+    weights_init        = None,
+    bias_init           = None,
 ):
     # For now only apply skip connections if out_dim == in_dim
-    l = linear(X, out_dim, scope)
+    transform_args = {'X': X, 'out_dim': out_dim, 'scope': scope,
+        'weights_initializer': weights_init, 'bias_initializer': bias_init}
+    l = linear(**{k: v for k, v in transform_args.items() if v is not None})
     if batch_normalization:
         l = tf.layers.batch_normalization(l, center=True, scale=True, is_training=training, scope=scope)
     ff = activation(l)
@@ -76,16 +84,18 @@ def _feedforward_step(
 # TODO(mmd): Dropout on and output_layer = False may not make any sense...
 def feedforward(
     X, out_dim,
-    hidden_layers       = 2,
-    hidden_dim          = -1,
-    activation          = tf.nn.relu,
-    skip_connections    = False,
-    output_activation   = tf.identity,
-    output_layer        = True,
-    dim_change          = 'jump',
-    dropout_keep_prob   = None,
-    batch_normalization = None,
-    training            = True,
+    hidden_layers             = 2,
+    hidden_dim                = -1,
+    activation                = tf.nn.relu,
+    skip_connections          = False,
+    output_activation         = tf.identity,
+    output_layer              = True,
+    output_layer_weights_init = None,
+    output_layer_bias_init    = None,
+    dim_change                = 'jump',
+    dropout_keep_prob         = None,
+    batch_normalization       = None,
+    training                  = True,
 ):
     assert dim_change in ['jump', 'step'], "'%s' not valid (should be in ['jump', 'step'])" % dim_change
     assert isinstance(hidden_layers, int) and hidden_layers >= 1
@@ -105,7 +115,9 @@ def feedforward(
     if dropout_keep_prob is not None: running = tf.nn.dropout(running, dropout_keep_prob)
 
     if output_layer: return _feedforward_step(running, out_dim, 'output_layer',
-        skip_connections=skip_connections, activation=output_activation)
+            weights_init=output_layer_weights_init, bias_init=output_layer_bias_init,
+            activation=output_activation
+        )
     else: return running
 
 def step_variable(name='global_step'): return tf.Variable(0, name=name, trainable=False)
