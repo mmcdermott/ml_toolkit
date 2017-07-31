@@ -71,10 +71,10 @@ def split(tables, test_size=0.2, dev_size=.125, random_state=None):
     for i, table in enumerate(tables):
         if table is not None: present_tables.append(table)
         else: none_indices.append(i)
-    table_cnt_multiplier = 3 if dev_size is not None and dev_size > 0 else 2
+    table_cnt_multiplier = 3 if dev_size is not None else 2
 
     results = list(train_test_split(*present_tables, test_size=test_size, random_state=random_state))
-    if dev_size is not None and dev_size > 0:
+    if dev_size is not None:
         train_tables, test_tables = _split_pairs(results)
         dev_splits = train_test_split(*train_tables, test_size=dev_size, random_state=random_state)
         train_tables, dev_tables = _split_pairs(dev_splits)
