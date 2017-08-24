@@ -29,7 +29,7 @@ def _cosine_distance(X, Y, pad=1e-7):
     return 1 - tf.reduce_mean((pad + tf.reduce_sum(X*Y, axis=1))/(pad + tf.norm(X, axis=1)*tf.norm(Y, axis=1)))
 
 def dist(X, Y, ord='euc'):
-    assert ord in DISTANCES
+    assert ord in DISTANCES, 'ord invalid: %s is not in {%s}' % (ord, ', '.join(DISTANCES))
 
     if ord == 'cos': return _cosine_distance(X, Y)
     else: return tf.reduce_mean(tf.norm(X - Y, axis=1, ord=DISTANCE_MAPPINGS[ord]))
@@ -43,6 +43,7 @@ def center(sample_df, axis=0):
     )
 
 # Neural Network Constructions
+# TODO(mmd): Make functional so alpha can be set in class initializiers more easily.
 def leaky_relu(X, alpha=0.2): return tf.maximum(alpha*X, X)
 def linear(
       X, out_dim, scope,
@@ -82,6 +83,7 @@ def _feedforward_step(
 
 # TODO(mmd): Use enums for dim_change options.
 # TODO(mmd): Dropout on and output_layer = False may not make any sense...
+# TODO(mmd): Dropout on and training = False may not make any sense...
 def feedforward(
     X, out_dim,
     hidden_layers             = 2,
@@ -98,8 +100,9 @@ def feedforward(
     training                  = True,
 ):
     assert dim_change in ['jump', 'step'], "'%s' not valid (should be in ['jump', 'step'])" % dim_change
-    assert isinstance(hidden_layers, int) and hidden_layers >= 1
-    assert isinstance(hidden_dim, int) and (hidden_dim == -1 or hidden_dim > 0)
+    assert isinstance(hidden_layers, int) and hidden_layers >= 1, 'hidden_layers invalid: '+str(hidden_layers)
+    assert isinstance(hidden_dim, int) and (hidden_dim == -1 or hidden_dim > 0), \
+            'hidden_dim invalid ' + str(hidden_dim)
 
     source_dim = get_dim(X)
     if hidden_dim == -1: hidden_dim = source_dim
