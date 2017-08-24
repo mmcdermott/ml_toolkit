@@ -5,15 +5,16 @@ import tensorflow as tf, numpy as np, pandas as pd
 import ml_toolkit.tensorflow_constructions as tfc, ml_toolkit.pandas_constructions as pdc
 import time, math, os, pickle
 
-from constants import *
-from utils import *
-from benchmarks_printer import BenchmarkPrinter, ITER_HEADER, TIME_HEADER, STEP_HEADER
+from .benchmarks_printer import BenchmarkPrinter, ITER_HEADER, TIME_HEADER, STEP_HEADER
+
+# TODO(mmd): Proper Comments
+# TODO(mmd): Tests
+# TODO(mmd): [SubClass].Load(model_dir) path.
+# TODO(mmd): Data ingestors.
+# TODO(mmd): Logger/Benchmark Printer
 
 class TensorFlowModel(object):
     """
-    Epochs, loss multipliers, patiences are lists to represent different training stages (so we can train one
-    critic heavy stage with an unsupervised loss to optimality, and then a translator heavy stage with a
-    predictive loss more fully as a second stage of trianing)
     """
     def __init__(
         self,
@@ -21,7 +22,7 @@ class TensorFlowModel(object):
         save_dir                     = '',
         train_suffix                 = '/train',
         dev_suffix                   = '/dev',
-        model_ckpt_name              = '',
+        model_ckpt_name              = 'model.ckpt',
         model_params_name            = 'model_params',
         flush_secs                   = 15,
         random_state                 = None,
@@ -47,10 +48,11 @@ class TensorFlowModel(object):
     def setup(self):
         model_params_file = os.path.join(self.save_dir, self.model_params_name) + '.pkl'
         if os.path.isfile(model_params_file):
-            with open(model_params_file, 'r') as f: self.__dict__ = pickle.load(f).copy()
-            self.save_dir = save_dir
+            curr_save_dir = self.save_dir
+            with open(model_params_file, mode='rb') as f: self.__dict__ = pickle.load(f).copy()
+            self.save_dir = curr_save_dir
 
-        with open(model_params_file, 'w') as f: pickle.dump(self.__dict__, f)
+        with open(model_params_file, mode='wb') as f: pickle.dump(self.__dict__, f)
 
         self.build_graph()
         assert self.graph_is_built, "Graph should be built!"
