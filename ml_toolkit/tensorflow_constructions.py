@@ -29,7 +29,7 @@ def _cosine_distance(X, Y, pad=1e-7):
     return 1 - tf.reduce_mean((pad + tf.reduce_sum(X*Y, axis=1))/(pad + tf.norm(X, axis=1)*tf.norm(Y, axis=1)))
 
 def dist(X, Y, ord='euc'):
-    assert ord in DISTANCES
+    assert ord in DISTANCES, 'Unsupported distance %s given (supported: %s)' % (str(ord), str(DISTANCES))
 
     if ord == 'cos': return _cosine_distance(X, Y)
     else: return tf.reduce_mean(tf.norm(X - Y, axis=1, ord=DISTANCE_MAPPINGS[ord]))
@@ -98,8 +98,8 @@ def feedforward(
     training                  = True,
 ):
     assert dim_change in ['jump', 'step'], "'%s' not valid (should be in ['jump', 'step'])" % dim_change
-    assert isinstance(hidden_layers, int) and hidden_layers >= 1
-    assert isinstance(hidden_dim, int) and (hidden_dim == -1 or hidden_dim > 0)
+    assert isinstance(hidden_layers, int) and hidden_layers >= 1, 'Hidden layers < 1!'
+    assert isinstance(hidden_dim, int) and (hidden_dim == -1 or hidden_dim > 0), 'Hidden dim invalid'
 
     source_dim = get_dim(X)
     if hidden_dim == -1: hidden_dim = source_dim
