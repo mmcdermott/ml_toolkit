@@ -32,7 +32,7 @@ def dist(X, Y, ord='euc'):
     assert ord in DISTANCES, 'Unsupported distance %s given (supported: %s)' % (str(ord), str(DISTANCES))
 
     if ord == 'cos': return _cosine_distance(X, Y)
-    else: return tf.reduce_mean(tf.norm(X - Y, axis=1, ord=DISTANCE_MAPPINGS[ord]))
+    else: return tf.reduce_mean(tf.norm(X - Y + 1e-7, axis=1, ord=DISTANCE_MAPPINGS[ord]))
 
 # Centering data:
 def center(sample_df, axis=0):
