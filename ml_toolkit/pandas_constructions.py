@@ -73,7 +73,11 @@ def split(tables, test_size=0.2, dev_size=.125, random_state=None):
         else: none_indices.append(i)
     table_cnt_multiplier = 3 if dev_size is not None else 2
 
-    results = list(train_test_split(*present_tables, test_size=test_size, random_state=random_state))
+    if test_size is not None and test_size > 0:
+        results = list(train_test_split(*present_tables, test_size=test_size, random_state=random_state))
+    elif test_size is not None and test_size == 0:
+        results = list(_interleave(present_tables, map(lambda df: df.iloc[0:0], present_tables)))
+
     if dev_size is not None:
         train_tables, test_tables = _split_pairs(results)
         dev_splits = train_test_split(*train_tables, test_size=dev_size, random_state=random_state)
