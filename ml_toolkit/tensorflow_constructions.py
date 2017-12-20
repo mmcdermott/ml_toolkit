@@ -28,11 +28,11 @@ def make_compatible(*tensors):
 def _cosine_distance(X, Y, pad=1e-7):
     return 1 - tf.reduce_mean((pad + tf.reduce_sum(X*Y, axis=1))/(pad + tf.norm(X, axis=1)*tf.norm(Y, axis=1)))
 
-def dist(X, Y, ord='euc'):
+def dist(X, Y, ord='euc', pad=1e-7):
     assert ord in DISTANCES, 'Unsupported distance %s given (supported: %s)' % (str(ord), str(DISTANCES))
 
-    if ord == 'cos': return _cosine_distance(X, Y)
-    else: return tf.reduce_mean(tf.norm(X - Y, axis=1, ord=DISTANCE_MAPPINGS[ord]))
+    if ord == 'cos': return _cosine_distance(X, Y, pad=pad)
+    else: return tf.reduce_mean(tf.norm(X - Y + pad, axis=1, ord=DISTANCE_MAPPINGS[ord]))
 
 # Centering data:
 def center(sample_df, axis=0):

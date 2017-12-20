@@ -1,5 +1,5 @@
 import pandas as pd, numpy as np
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
 # TODO(mmd): Fix improper _ usage on private methods.
 
 
@@ -85,3 +85,35 @@ def split(tables, test_size=0.2, dev_size=.125, random_state=None):
         results = results[:idx] + [None]*table_cnt_multiplier + results[idx:]
 
     return results
+
+#TODO(mmd): Add n= option.
+def index_k_fold(df, k=10, stratify_by=None, random_state=None, inplace=True, fold_name = 'Fold'):
+    kf_args = dict(n_splits=k, random_state=random_state, shuffle=True)
+    if stratify_by is None:
+        kf = KFold(**kf_args)
+        splits = kf.split(df.values)
+    else:
+        kf = StratifiedKFold(**kf_args)
+        if type(stratify_by) is list:
+            labels, cnt, indices_map, indices_list = [], 0, {}, []
+            levels = np.concatenate(
+                [np.expand_dims(df.index.get_level_values(l).values, 1) for l in stratify_by],
+                axis=1
+            )
+            for l in levels:
+                key = tuple(l)
+                if key not in indices_map:
+                    cnt += 1
+                    indices_map[key] = cnt
+                indices_list.append(indices_map[key])
+            splits = kf.split(df.values, indices_list)
+        else: splits = kf.split(df.values, df.index.get_level_values(stratify_by))
+
+    fold_indices = np.ones(len(df), dtype=np.uint8)
+    for fold, (_, fold_idx) in enumerate(splits):
+        fold_indices[fold_idx] = fold
+
+    if not inplace: df = df.copy()
+    df[fold_name] = fold_indices
+    df.set_index(fold_name, append=True, inplace=True)
+    return df
