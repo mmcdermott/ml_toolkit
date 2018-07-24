@@ -28,10 +28,13 @@ def __keep_levels(df_idx, levels_to_keep=[]):
 def __drop_levels(df_idx, levels_to_drop=[]):
     for level in levels_to_drop: df_idx = df_idx.droplevel(level)
     return df_idx
-def keep_indices(df, index_levels=[], column_levels=[], inplace=False):
+def keep_indices(df, index_levels=None, column_levels=None, inplace=False):
+    assert index_levels is None or type(index_levels) in (list, tuple), "index_levels must be a list/tuple"
+    assert column_levels is None or type(column_levels) in (list, tuple), "column_levels must be a list/tuple"
+
     df_cp = df.copy() if not inplace else df
-    if index_levels != []: df_cp.index = __keep_levels(df_cp.index, levels_to_keep=index_levels)
-    if column_levels != []: df_cp.columns = __keep_levels(df_cp.columns, levels_to_keep=column_levels)
+    if index_levels != None: df_cp.index = __keep_levels(df_cp.index, levels_to_keep=index_levels)
+    if column_levels != None: df_cp.columns = __keep_levels(df_cp.columns, levels_to_keep=column_levels)
     return df_cp
 def drop_indices(df, index_levels=[], column_levels=[], inplace=False):
     df_cp = df.copy() if not inplace else df
