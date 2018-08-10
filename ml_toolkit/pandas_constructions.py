@@ -2,6 +2,18 @@ import pandas as pd, numpy as np
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
 # TODO(mmd): Fix improper _ usage on private methods.
 
+def if_ind(df):
+    a0, a1 = df.sum(axis=0), df.sum(axis=1)
+
+    N = a0.sum()
+
+    exp = df.copy()
+    exp.loc[:, :] = 1 / N
+    exp = exp.multiply(a0, axis=1)
+    exp = exp.multiply(a1, axis=0)
+
+    return exp
+
 
 # TODO(mmd): Document pre-conditions.
 def join(dfs): return dfs[0].join(dfs[1:], how='inner')
