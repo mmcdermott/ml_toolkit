@@ -8,6 +8,18 @@ def or_idxs(idxs):
     for idx in idxs[1:]: running = (running | idx)
     return running
 
+def if_ind(df):
+    a0, a1 = df.sum(axis=0), df.sum(axis=1)
+
+    N = a0.sum()
+
+    exp = df.copy()
+    exp.loc[:, :] = 1 / N
+    exp = exp.multiply(a0, axis=1)
+    exp = exp.multiply(a1, axis=0)
+
+    return exp
+
 # TODO(mmd): Document pre-conditions.
 def join(dfs): return dfs[0].join(dfs[1:], how='inner')
 
@@ -131,3 +143,48 @@ def index_k_fold(df, k=10, stratify_by=None, random_state=None, inplace=True, fo
     df[fold_name] = fold_indices
     df.set_index(fold_name, append=True, inplace=True)
     return df
+
+def __combine_wrapper(df, name, fn, agg_lvl, agg_cols_needed):
+    in_kwargs = {}
+    for agg_col in [name] + agg_cols_needed:
+        in_kwargs[agg_col] = df[df.index.get_level_values(agg_lvl) == agg_col]
+        in_kwargs[agg_col].index = in_kwargs[agg_col].index.droplevel(agg_lvl)
+
+    out = pd.DataFrame({'out': fn(**in_kwargs)})
+    out[agg_lvl] = name
+    out.set_index(agg_lvl, append=True, inplace=True)
+    return out['out']
+
+def combine_count(count): return count.sum(axis=1)
+def combine_mean(mean, count): return (mean * count).sum(axis=1) / count.sum(axis=1)
+def combine_var(var, mean, count): return combine_mean((var+mean**2), count) - combine_mean(mean, count)
+def combine_std(std, mean, count): return (combine_var(std**2, mean, count))**(0.5)
+
+AGG_COMBINATION_FUNCTIONS = {
+    'count': (combine_count, []),
+    'mean': (combine_mean, ['count']),
+    'std': (combine_std, ['mean', 'count']),
+    'var': (combine_var, ['mean', 'count']),
+    'max': (None, []),
+    'min': (None, []),
+}
+
+def combine_agg_df(in_df, axis=0, lvl='Aggregation Function'):
+    df = in_df if axis == 1 else in_df.T
+
+    out_df = df[[]]
+    out_df_col = 'out'
+    out_df[out_df_col] = np.NaN
+
+    agg_idx = out_df.index.get_level_values(lvl)
+    agg_set = set(agg_idx)
+
+    for agg_fn in agg_set:
+        if agg_fn not in AGG_COMBINATION_FUNCTIONS: raise NotImplementedError("Cannot aggregate %s" % agg_fn)
+
+        fn, cols_needed = AGG_COMBINATION_FUNCTIONS[agg_fn]
+        if fn is None: fn = lambda x: x.agg([agg_fn], axis=1)
+
+        out_df.loc[agg_idx == agg_fn, out_df_col] = __combine_wrapper(df, agg_fn, fn, lvl, cols_needed)
+
+    return out_df if axis == 1 else out_df.T
