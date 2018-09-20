@@ -2,6 +2,11 @@ import pandas as pd, numpy as np
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
 # TODO(mmd): Fix improper _ usage on private methods.
 
+def or_idxs(idxs):
+    assert len(idxs) > 0, "Must provide a non-empty list of indices."
+    running = idxs[0]
+    for idx in idxs[1:]: running = (running | idx)
+    return running
 
 # TODO(mmd): Document pre-conditions.
 def join(dfs): return dfs[0].join(dfs[1:], how='inner')
@@ -23,7 +28,9 @@ def stack_columns(df, col_name):
 def __keep_levels(df_idx, levels_to_keep=[]):
     all_levels = df_idx.names
     for level in all_levels:
-        if level not in levels_to_keep: df_idx = df_idx.droplevel(level)
+        if level not in levels_to_keep:
+            if len(df_idx.names) > 1: df_idx = df_idx.droplevel(level)
+            else: df_idx = pd.Index(range(len(df_idx)))
     return df_idx
 def __drop_levels(df_idx, levels_to_drop=[]):
     for level in levels_to_drop: df_idx = df_idx.droplevel(level)
