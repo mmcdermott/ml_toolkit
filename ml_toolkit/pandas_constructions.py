@@ -20,6 +20,8 @@ def if_ind(df):
 
     return exp
 
+def ones_like(df): return pd.DataFrame(np.ones_like(df), index=df.index, columns=df.columns, )
+
 # TODO(mmd): Document pre-conditions.
 def join(dfs): return dfs[0].join(dfs[1:], how='inner')
 
@@ -52,8 +54,8 @@ def keep_indices(df, index_levels=None, column_levels=None, inplace=False):
     assert column_levels is None or type(column_levels) in (list, tuple), "column_levels must be a list/tuple"
 
     df_cp = df.copy() if not inplace else df
-    if index_levels != None: df_cp.index = __keep_levels(df_cp.index, levels_to_keep=index_levels)
-    if column_levels != None: df_cp.columns = __keep_levels(df_cp.columns, levels_to_keep=column_levels)
+    if index_levels is not None: df_cp.index = __keep_levels(df_cp.index, levels_to_keep=index_levels)
+    if column_levels is not None: df_cp.columns = __keep_levels(df_cp.columns, levels_to_keep=column_levels)
     return df_cp
 def drop_indices(df, index_levels=[], column_levels=[], inplace=False):
     df_cp = df.copy() if not inplace else df
