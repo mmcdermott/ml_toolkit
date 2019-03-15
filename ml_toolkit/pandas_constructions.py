@@ -2,6 +2,12 @@ import pandas as pd, numpy as np
 from sklearn.model_selection import train_test_split, KFold, StratifiedKFold
 # TODO(mmd): Fix improper _ usage on private methods.
 
+def and_idxs(idxs):
+    assert len(idxs) > 0, "Must provide a non-empty list of indices."
+    running = idxs[0]
+    for idx in idxs[1:]: running = (running & idx)
+    return running
+
 def or_idxs(idxs):
     assert len(idxs) > 0, "Must provide a non-empty list of indices."
     running = idxs[0]
